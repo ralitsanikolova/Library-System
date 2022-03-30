@@ -1,0 +1,264 @@
+﻿@page "/bookList/create"
+@page "/bookList/edit/{Id:int}"
+
+@using Business.Repository
+@using Business.Repository.IRepository
+@using DataAccess.Data
+@using DataAccess.Data.Enums
+@using ModelsDTO
+@using OnlineLibrarySystem.Services.IService
+@inject IBookRepository BookRepository;
+@inject IBookImageRepository ImageRepository;
+@inject ISectionRepository SectionRepository;
+@inject NavigationManager NavManager;
+@inject IFileUpload FileUpload;
+
+<div class="row mt-2 mb-5">
+    <h3 class="card-title text-info mb-3 ml-3">@Title Book</h3>
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <EditForm Model=BookModel OnValidSubmit="HandleBookUpsert">
+                    <div class="form-group">
+                        <label>Title</label>
+                        <InputText @bind-Value="BookModel.Title" class="form-control"></InputText>
+                        <ValidationMessage For="()=>BookModel.Title"></ValidationMessage>
+                    </div>
+                    <br />
+
+                    <div class="form-group">
+                        <label>Author</label>
+                        <InputText @bind-Value="BookModel.Author" class="form-control"></InputText>
+                        <ValidationMessage For="()=>BookModel.Title"></ValidationMessage>
+                    </div>
+                    <br />
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <InputText @bind-Value="BookModel.Description" class="form-control"></InputText>
+                        <ValidationMessage For="()=>BookModel.Title"></ValidationMessage>
+                    </div>
+                    <br />
+
+                    <div class="form-group">
+                        <label>Year of publish</label>
+                        <InputNumber @bind-Value="BookModel.YearPublished" class="form-control"></InputNumber>
+                        <ValidationMessage For="()=>BookModel.YearPublished"></ValidationMessage>
+                    </div>
+                    <br />
+
+                    <div class="form-group">
+                        <label>Kind</label>
+                        <InputText @bind-Value="BookModel.Kind" class="form-control"></InputText>
+                    </div>
+                    <br />
+
+                    <div class="form-group">
+                        <label>ISBN</label>
+                        <InputNumber @bind-Value="BookModel.ISBN" class="form-control"></InputNumber>
+                    </div>
+                    <br />
+
+                    <div class="form-group">
+                        <label for="Section">Section</label>
+                        <InputSelect placeholder="Section" @bind-Value="Sections">
+                            @foreach (var sect in Sections)
+                            {
+                                <option value="@sect.Name">@sect.Name"</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <br />
+
+                    <div class="form-group" style="padding-top:70px;">
+                        <InputFile OnChange="HandleImageUpload" multiple></InputFile>
+                        <div class="row">
+                            @if (IsImageUploadProcessStarted)
+                            {
+                                <div class="col-md-12">
+                                    <span><i class="fa fa-spin fa-spinner"></i> Please wait.. Images are uploading...</span>
+                                </div>
+                            }
+                            @if (BookModel.ImageUrls != null && BookModel.ImageUrls.Count > 0)
+                            {
+                                int serial = 1;
+                                foreach (var bookImage in BookModel.ImageUrls)
+                                {
+                                    <div class="col-md-2 mt-3">
+                                        <div class="book-image" style="background: url('@bookImage') 50% 50%; ">
+                                            <span class="book-image-title">@serial</span>
+                                        </div>
+
+                                        <button type="button" @onclick="()=>DeletePhoto(bookImage)" class="btn btn-outline-danger btn-block mt-4">
+                                            Delete
+                                        </button>
+                                    </div>
+                                    serial++;
+                                }
+                            }
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary">@Title Book</button>
+                        <NavLink href="bookList" class="btn btn-secondary">Back to Index</NavLink>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+    private string Title { get; set; } = "Create";
+    private bool IsImageUploadProcessStarted { get; set; } = false;
+    private BookDTO BookModel { get; set; } = new BookDTO();
+    private BookImageDTO BookImage { get; set; } = new BookImageDTO();
+    private IEnumerable<SectionDTO> Sections { get; set; } = new List<SectionDTO>();
+    private List<string> DeletedImageNames { get; set; } = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id != null)
+        {
+
+            Title = "Update";
+            BookModel = await BookRepository.GetBook(Id.Value);
+            Sections = await SectionRepository.GetAllSections();
+
+        }
+        else
+        {
+            BookModel = new BookDTO();
+        }
+    }
+    private async Task HandleBookUpsert()
+    {
+        try
+        {
+            var bookDetailsByTitle = await BookRepository.IsBookUnique(BookModel.Title, BookModel.BookId);
+            if (bookDetailsByTitle != null)
+            {
+                return;
+            }
+
+            if (BookModel.BookId != 0 && Title == "Update")
+            {
+                var updateBookResult = await BookRepository.UpdateBook(BookModel.BookId, BookModel);
+                if ((BookModel.ImageUrls != null && BookModel.ImageUrls.Any()) || (DeletedImageNames != null && DeletedImageNames.Any()))
+                {
+                    if (DeletedImageNames != null && DeletedImageNames.Any())
+                    {
+                        foreach (var deletedImageName in DeletedImageNames)
+                        {
+                            var imageName = deletedImageName.Replace($"{NavManager.BaseUri}BookImages/", "");
+
+                            var result = FileUpload.DeleteFile(imageName);
+                            await ImageRepository.DeleteBookImageByImageUrl(deletedImageName);
+                        }
+                    }
+                    await AddBookImage(updateBookResult);
+                }
+            }
+            else
+            {
+                var result = await BookRepository.CreateBook(BookModel);
+                await AddBookImage(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Error", ex);
+        }
+        NavManager.NavigateTo("bookList");
+    }
+    private async Task HandleImageUpload(InputFileChangeEventArgs e)
+    {
+        IsImageUploadProcessStarted = true;
+        try
+        {
+            var images = new List<string>();
+            if (e.GetMultipleFiles().Count > 0)
+            {
+                foreach (var file in e.GetMultipleFiles())
+                {
+                    System.IO.FileInfo fileInfo = new System.IO.FileInfo(file.Name);
+                    if (fileInfo.Extension.ToLower() == ".jpg" ||
+                    fileInfo.Extension.ToLower() == ".png" ||
+                     fileInfo.Extension.ToLower() == ".jpeg")
+                    {
+                        var uploadImagePath = await FileUpload.UploadFile(file);
+                        images.Add(uploadImagePath);
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+                if (images.Any())
+                {
+                    if (BookModel.ImageUrls != null && BookModel.ImageUrls.Any())
+                    {
+                        BookModel.ImageUrls.AddRange(images);
+                    }
+                    else
+                    {
+                        BookModel.ImageUrls = new List<string>();
+                        BookModel.ImageUrls.AddRange(images);
+                    }
+                }
+                else
+                {
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    private async Task AddBookImage(BookDTO bookDetails)
+    {
+        foreach (var imageUrl in BookModel.ImageUrls)
+        {
+            if (BookModel.BookImages == null || BookModel.BookImages.Where(x => x.BookImageUrl == imageUrl).Count() == 0)
+            {
+
+                BookImage = new BookImageDTO()
+                    {
+                        BookId = bookDetails.BookId,
+                        BookImageUrl = imageUrl
+                    };
+                await ImageRepository.CreateBookImage(BookImage);
+            }
+        }
+    }
+
+    internal async Task DeletePhoto(string imageUrl)
+    {
+        try
+        {
+            var imageIndex = BookModel.ImageUrls.FindIndex(x => x == imageUrl);
+            var imageName = imageUrl.Replace($"{NavManager.BaseUri}bookImages/", "");
+            if (BookModel.BookId == 0 && Title == "Create")
+            {
+                var result = FileUpload.DeleteFile(imageName);
+            }
+            else
+            {
+                //update
+                DeletedImageNames ??= new List<string>();
+                DeletedImageNames.Add(imageUrl);
+            }
+            BookModel.ImageUrls.RemoveAt(imageIndex);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+}

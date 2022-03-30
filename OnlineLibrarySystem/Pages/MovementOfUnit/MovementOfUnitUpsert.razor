@@ -1,0 +1,126 @@
+﻿@page "/movementOfUnits/create"
+@page "/movementOfUnits/edit/{Id:int}"
+@using DataAccess.Data.Enums
+@using ModelsDTO
+@using Business.Repository.IRepository
+@inject IMovementOfUnitRepository MovementOfUnits;
+@inject ILibraryUnitRepository LibraryUnits;
+@inject NavigationManager NavManager;
+
+<div class="row mt-2 mb-5">
+    <h3 class="card-title text-info mb-3 ml-3">@Name Movement</h3>
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <EditForm Model=MovementModel OnValidSubmit="HandleSectionUpsert">
+
+                    <div class="form-group">
+                        <label for="UnitId">UnitID</label>
+                        <InputSelect placeholder="Section" @bind-Value="Units">
+                            @foreach (var unit in Units)
+                            {
+                                <option value="@unit.InventoryId">@unit.InventoryId"</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <br />
+
+                    <div class="form-group">
+                        <label>Librarian Name</label>
+                        <InputText @bind-Value="MovementModel.Librarian" class="form-control"></InputText>
+                        <ValidationMessage For="()=>MovementModel.Librarian"></ValidationMessage>
+                    </div>
+                    <br />
+
+                    <div class="form-group">
+                        <label>Reader Name</label>
+                        <InputText @bind-Value="MovementModel.Reader" class="form-control"></InputText>
+                        <ValidationMessage For="()=>MovementModel.Reader"></ValidationMessage>
+                    </div>
+                    <br />
+
+                    <label>Date of Movement Name</label>
+                    <InputDate @bind-Value="MovementModel.DateTimeOfMovement"></InputDate>
+                    <br />
+
+                    <label>Deadline</label>
+                    <InputDate @bind-Value="MovementModel.Deadline"></InputDate>
+                    <br>
+
+                     <label>Unit Condition</label>
+                    <InputSelect @bind-Value="MovementModel.UnitCondition">
+                        @foreach (var unitCondition in Enum.GetValues(typeof(UnitCondition)))
+                        {
+                            <option value=@unitCondition>@unitCondition</option>
+                        }
+                        <ValidationMessage For="()=>MovementModel.UnitCondition"></ValidationMessage>
+                    </InputSelect>
+                    <br />
+
+                     <label>Movement</label>
+                    <InputSelect @bind-Value="MovementModel.Movement">
+                        @foreach (var movement in Enum.GetValues(typeof(Movement)))
+                        {
+                            <option value=@movement>@movement</option>
+                        }
+                        <ValidationMessage For="()=>MovementModel.UnitCondition"></ValidationMessage>
+                    </InputSelect>
+                    <br />
+
+                    <div class="form-group">
+                        <button class="btn btn-primary">@Name Movement</button>
+                        <NavLink href="movementOfUnits" class="btn btn-secondary">Back to Movement List</NavLink>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+    private string Name { get; set; } = "Create";
+    private MovementOfUnitDTO MovementModel { get; set; } = new MovementOfUnitDTO();
+    private IEnumerable<LibraryUnitDTO> Units { get; set; } = new List<LibraryUnitDTO>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id != null)
+        {
+            Name = "Update";
+            MovementModel = await MovementOfUnits.GetMovement(Id.Value);
+            Units = await LibraryUnits.GetAllUnits();
+        }
+        else
+        {
+            MovementModel = new MovementOfUnitDTO();
+        }
+    }
+
+    private async Task HandleSectionUpsert()
+    {
+        try
+        {
+            var movementDetailsByTitle = await MovementOfUnits.IsUnitMovementUnique(MovementModel.Librarian, MovementModel.MovementId);
+            if (movementDetailsByTitle != null)
+            {
+                return;
+            }
+
+            if (MovementModel.MovementId != 0 && Name == "Update")
+            {
+                var updateMovementResult = await MovementOfUnits.UpdateMovement(MovementModel.MovementId, MovementModel);
+            }
+            else
+            {
+                var result = await MovementOfUnits.CreateMovement(MovementModel);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+        NavManager.NavigateTo("movementOfUnits");
+    }
+}

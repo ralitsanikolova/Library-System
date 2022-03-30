@@ -1,0 +1,81 @@
+﻿@page "/catalogue"
+@using DataAccess.Data
+
+<div class="text-center bg-blue-100">
+    <input class="border-4 w-1/3 rounded m-6 p-6 h-8
+               border-blue-300" @bind-value="SearchText"
+           @bind-value:event="oninput" placeholder="Search by title" />
+
+    <span class="text-muted ml-5">
+        Showing @FilteredBook.Count out of @Books.Count
+    </span>
+</div>
+
+<ul class="list-unstyled">
+    @foreach (var book in Books)
+    {
+        <li class="media my-3">
+            <div class="media-img-wrapper mr-2">
+                <a href="#">
+                    <img class="media-img" src="@book.ImageUrlCatalogue" alt="@book.Title">
+                </a>
+            </div>
+            <div class="media-body">
+                <a href="#">
+                    <h4 class="mb-0">@book.Title</h4>
+                    <h4 class="mb-0">@book.Author</h4>
+                </a>
+                <p>@book.Description</p>
+            </div>
+        </li>
+    }
+</ul>
+
+@code {
+    public string SearchText = "";
+
+    List<Book> FilteredBook => Books.Where(i => i.Title.ToLower().Contains(SearchText.ToLower())).ToList();
+
+    private static List<Book> Books = new List<Book>
+    {
+         new Book
+                {
+                    BookId = 1,
+                    Title = "The Hitchhiker's Guide To The Galaxy",
+                    Author = "Douglas Adams",
+                    Description = "The broad narrative of Hitchhiker follows the misadventures of the last surviving man, Arthur Dent, following the demolition of the Earth by a Vogon constructor fleet to make way for a hyperspace bypass. Dent is rescued from Earth's destruction by Ford Prefect—a human-like alien writer for the eccentric," +
+                    " electronic travel guide The Hitchhiker's Guide to the Galaxy—by hitchhiking onto a passing Vogon spacecraft. Following his rescue, Dent explores the galaxy with Prefect and encounters Trillian, another human who had been taken from Earth (before its destruction) by the two-headed President of the Galaxy Zaphod Beeblebrox and the depressed Marvin," +
+                    " the Paranoid Android. Certain narrative details were changed among the various adaptations.",
+                    YearPublished = 1979,
+                    ISBN = 1452698,
+                    Kind = "Paper",
+                    ImageUrlCatalogue= "https://upload.wikimedia.org/wikipedia/en/b/bd/H2G2_UK_front_cover.jpg"
+
+                },
+                new Book
+                {
+                    BookId = 2,
+                    Title = "Pride and Prejudice",
+                    Author = "Jane Austen",
+                    Description = "Mr. Bennet, owner of the Longbourn estate in Hertfordshire, has five daughters, but his property is entailed and can only be passed to a male heir. His wife also lacks an inheritance, so his family faces becoming very poor upon his death. Thus, it is imperative that at least one of the girls marry well to support the others, which is a motivation that drives the plot. " +
+                    "Pride and Prejudice has consistently appeared near the top of lists of most-loved books among literary scholars and the reading public. It has become one of the most popular novels in English literature, with over 20 million copies sold, and has inspired many derivatives in modern literature",
+                    YearPublished = 1813,
+                    ISBN = 1452699,
+                    Kind = "Paper",
+                    ImageUrlCatalogue = "https://upload.wikimedia.org/wikipedia/en/0/09/Brock_Pride_and_Prejudice.jpg"
+                },
+                new Book
+                {
+                    BookId = 3,
+                    Title = "Harry Potter and the Philosopher's Stone ",
+                    Author = "J. K. Rowling",
+                    Description = "Harry Potter and the Philosopher's Stone is a fantasy novel written by British author J. K. Rowling. The first novel in the Harry Potter series and Rowling's debut novel, it follows Harry Potter, a young wizard who discovers his magical heritage on his eleventh birthday," +
+                    " when he receives a letter of acceptance to Hogwarts School of Witchcraft and Wizardry. Harry makes close friends and a few enemies during his first year at the school, and with the help of his friends, he faces an attempted comeback by the dark wizard Lord Voldemort, who killed Harry's parents, but failed to kill Harry when he was just 15 months old.",
+                    YearPublished = 1997,
+                    ISBN = 1452601,
+                    Kind = "Paper",
+                    ImageUrlCatalogue = "https://www.nzherald.co.nz/resizer/EMOphkyatSReWSs3MOw3gi_p6BI=/1200x0/smart/filters:quality(70)/arc-anglerfish-syd-prod-nzme.s3.amazonaws.com/public/EIQQ5VTKK5BC7DXNWYXZ5YPIEE.jpg"
+                }
+         };
+    }
+}

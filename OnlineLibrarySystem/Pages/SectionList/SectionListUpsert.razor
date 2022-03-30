@@ -1,0 +1,80 @@
+﻿@page "/sectionList/create"
+@page "/sectionList/edit/{Id:int}"
+@using ModelsDTO
+@using Business.Repository.IRepository
+@inject ISectionRepository SectionRepository;
+@inject NavigationManager NavManager;
+
+<div class="row mt-2 mb-5">
+    <h3 class="card-title text-info mb-3 ml-3">@Name Section</h3>
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <EditForm Model=SectionModel OnValidSubmit="HandleSectionUpsert">
+                    <div class="form-group">
+                        <label>Section Name</label>
+                        <InputText @bind-Value="SectionModel.Name" class="form-control"></InputText>
+                        <ValidationMessage For="()=>SectionModel.Name"></ValidationMessage>
+                    </div>           
+                    <div class="form-group">
+                        <label>Desc</label>
+                        <InputText @bind-Value="SectionModel.Description" class="form-control"></InputText>
+                        <ValidationMessage For="()=>SectionModel.Description"></ValidationMessage>
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary">@Name Section</button>
+                        <NavLink href="sectionList" class="btn btn-secondary">Back to Section</NavLink>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+    private string Name { get; set; } = "Create";
+    private SectionDTO SectionModel { get; set; } = new SectionDTO();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id != null)
+        {
+            Name = "Update";
+            SectionModel = await SectionRepository.GetSection(Id.Value);
+        }
+        else
+        {
+            //create
+            SectionModel = new SectionDTO();
+        }
+    }
+
+    private async Task HandleSectionUpsert()
+    {
+        try
+        {
+            //first check if the room if unique
+            var sectionDetailsByTitle = await SectionRepository.IsSectionUnique(SectionModel.Name, SectionModel.SectionId);
+            if (sectionDetailsByTitle != null)
+            {
+                return;
+            }
+
+            if (SectionModel.SectionId != 0 && Name == "Update")
+            {
+                var updateSectionResult = await SectionRepository.UpdateSection(SectionModel.SectionId, SectionModel);
+            }
+            else
+            {
+                var result = await SectionRepository.CreateSection(SectionModel);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+        NavManager.NavigateTo("sectionList");
+    }
+}

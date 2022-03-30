@@ -1,0 +1,107 @@
+﻿@page "/bookList"
+@using Business.Repository.IRepository
+@using ModelsDTO
+@inject IBookRepository BookRepository;
+@inject ISectionRepository SectionRepository;
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<AuthorizeView>
+    <Authorized>
+        <div class="row mt-4">
+            <div class="col-8">
+                <h4 class="card-title text-info"> Book List</h4>
+            </div>
+            <div class="col-3 offset-1">
+                <NavLink href="bookList/create" class="btn-info form-control">Add new Book </NavLink>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Description</th>
+                            <th>Year of publish</th>
+                            <th>ISBN</th>
+                            <th>Genre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        @if (Books != null)
+                        {
+                            foreach (var book in Books)
+                            {
+                                <tr>
+                                    <th>@book.Title</th>
+                                    <th>@book.Author</th>
+                                    <th>@book.Description</th>
+                                    <th>@book.YearPublished</th>
+                                    <th>@book.ISBN</th>
+                                    }
+
+                                    @if (Sections.Any())
+                                    {
+                                        @foreach (var name in Sections)
+                                        {
+                                            <th>@name.Name</th>
+                                        }
+                                    }
+                                    <td>
+                                        <NavLink href="@($"bookList/edit/{book.BookId}")" class="btn btn-primary">Edit</NavLink>
+                                        <button class="btn btn-danger" @onclick="()=> HandleDelete(book.BookId)">Delete</button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <th>No records found</th>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <p>You're not loggged in.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code {
+    private IEnumerable<BookDTO> Books { get; set; } = new List<BookDTO>();
+    private IEnumerable<SectionDTO> Sections { get; set; } = new List<SectionDTO>();
+    private int? DeleteBookId { get; set; } = null;
+    private bool IsProcessing { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Books = await BookRepository.GetAllBooks();
+        Sections = await SectionRepository.GetAllSections();
+    }
+
+    private async Task HandleDelete(int bookId)
+    {
+        IsProcessing = true;
+        if (DeleteBookId != null)
+        {
+            try
+            {
+                await BookRepository.DeleteBook(DeleteBookId.Value);
+                Books = await BookRepository.GetAllBooks();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error", ex);
+            }
+            Books = await BookRepository.GetAllBooks();
+        }
+
+    }
+}

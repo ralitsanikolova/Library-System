@@ -1,0 +1,89 @@
+﻿@page "/sectionList"
+@using Business.Repository
+@using ModelsDTO
+@using Business.Repository.IRepository
+@inject ISectionRepository SectionRepository
+
+<AuthorizeView>
+    <Authorized>
+        <div class="row mt-4">
+            <div class="col-8">
+                <h4 class="card-title text-info"> Book List</h4>
+            </div>
+            <div class="col-3 offset-1">
+                <NavLink href="sectionList/create" class="btn-info form-control">Add new Section </NavLink>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (Sections.Any())
+                        {
+                            foreach (var book in Sections)
+                            {
+                                <tr>
+                                    <td>@book.Name</td>
+                                    <td>@book.Description</td>
+                                    <td>
+                                        <NavLink href="@($"/sectionList/edit/{book.SectionId}")" class="btn btn-primary">Edit</NavLink>
+                                        <button class="btn btn-danger" @onclick="()=> HandleDelete(book.SectionId)">Delete</button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <th>No records found</th>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <p>You're not loggged in.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code {
+    private IEnumerable<SectionDTO> Sections { get; set; } = new List<SectionDTO>();
+    private int? DeleteSectionId { get; set; } = null;
+    private bool IsProcessing { get; set; } = false;
+
+    //get all books from upsert
+    protected override async Task OnInitializedAsync()
+    {
+        Sections = await SectionRepository.GetAllSections();
+    }
+
+    private async Task HandleDelete(int sectionId)
+    {
+        IsProcessing = true;
+        if (DeleteSectionId != null)
+        {
+            try
+            {
+                await SectionRepository.DeleteSection(DeleteSectionId.Value);
+                Sections = await SectionRepository.GetAllSections();
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            Sections = await SectionRepository.GetAllSections();
+        }
+
+    }
+}
