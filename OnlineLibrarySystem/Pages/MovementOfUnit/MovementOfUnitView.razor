@@ -1,0 +1,105 @@
+﻿@page "/movementOfUnits"
+@using Business.Repository
+@using ModelsDTO
+@using Business.Repository.IRepository
+@inject IMovementOfUnitRepository MovementOfUnits;
+@inject ILibraryUnitRepository UnitRepository
+
+<AuthorizeView>
+    <Authorized>
+        <div class="row mt-4">
+            <div class="col-8">
+                <h4 class="card-title text-info"> Movement List</h4>
+            </div>
+            <div class="col-3 offset-1">
+                <NavLink href="movementOfUnits/create" class="btn-info form-control">Add new movement </NavLink>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>Librarian</th>
+                            <th>Reader</th>
+                            <th>Date of movement</th>
+                            <th>Deadline</th>
+                            <th>UnitCondition</th>
+                            <th>Movement</th>
+                            <th>Unit Id</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (Movements != null || LibraryUnits != null)
+                        {
+                            foreach (var movement in Movements)
+                            {
+                                <tr>
+                                    <td>@movement.Librarian</td>
+                                    <td>@movement.Reader</td>                                 
+                                    <td>@movement.DateTimeOfMovement</td>
+                                    <td>@movement.Deadline</td>
+                                    <td>@movement.UnitCondition</td>
+                                    <td>@movement.Movement</td>
+                              }
+                              @foreach (var unit in LibraryUnits)
+                              {
+                                    <td>@unit.InventoryId</td>
+                              }
+                                    <td>
+                                        <NavLink href="@($"/movementOfUnits/edit/{movement.MovementId}")" class="btn btn-primary">Edit</NavLink>
+                                        <button class="btn btn-danger" @onclick="()=> HandleDelete(movement.MovementId)">Delete</button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <th>No records found</th>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <p>You're not loggged in.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private IEnumerable<MovementOfUnitDTO> Movements { get; set; } = new List<MovementOfUnitDTO>();
+    private IEnumerable<LibraryUnitDTO> LibraryUnits { get; set; } = new List<LibraryUnitDTO>();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        Movements = await MovementOfUnits.GetAllMovements();
+        LibraryUnits = await UnitRepository.GetAllUnits();
+    }
+
+    private int? DeleteMovementId { get; set; } = null;
+    private bool IsProcessing { get; set; } = false;
+
+    private async Task HandleDelete(int bookId)
+    {
+        IsProcessing = true;
+        if (DeleteMovementId != null)
+        {
+            try
+            {
+                await MovementOfUnits.DeleteMovement(DeleteMovementId.Value);
+                Movements = await MovementOfUnits.GetAllMovements();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error", ex);
+            }
+            Movements = await MovementOfUnits.GetAllMovements();
+        }
+    }
+}

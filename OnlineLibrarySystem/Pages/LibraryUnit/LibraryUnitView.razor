@@ -1,0 +1,93 @@
+﻿@page "/libraryUnit"
+@using ModelsDTO
+@using Business.Repository.IRepository
+@inject ILibraryUnitRepository LibraryUnitRepository;
+@inject IBookRepository BookRepository;
+
+<AuthorizeView>
+    <Authorized>
+        <div class="row mt-4">
+            <div class="col-8">
+                <h4 class="card-title text-info"> Unit List</h4>
+            </div>
+            <div class="col-3 offset-1">
+                <NavLink href="libraryUnit/create" class="btn-info form-control">Add new unit </NavLink>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Unit Condition</th>
+                            <th>Carrier</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Units != null || Books != null)
+                        {
+                            foreach (var unit in Units)
+                            {
+                                <tr>
+                                    @foreach (var title in Books)
+                                    {
+                                        <th>@title.Title</th>
+                                    }
+                                    <td>@unit.UnitCondition</td>
+                                    <td>@unit.Carrier</td>
+                                    <td>
+                                        <NavLink href="@($"/libraryUnit/edit/{unit.InventoryId}")" class="btn btn-primary">Edit</NavLink>
+                                        <button class="btn btn-danger" @onclick="()=> HandleDelete(unit.InventoryId)">Delete</button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <th>No records found</th>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <p>You're not loggged in.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private IEnumerable<LibraryUnitDTO> Units { get; set; } = new List<LibraryUnitDTO>();
+    private IEnumerable<BookDTO> Books { get; set; } = new List<BookDTO>();
+
+    private int? DeleteUnitId { get; set; } = null;
+    private bool IsProcessing { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Units = await LibraryUnitRepository.GetAllUnits();
+        Books = await BookRepository.GetAllBooks();
+    }
+
+    private async Task HandleDelete(int unitId)
+    {
+        IsProcessing = true;
+        if (DeleteUnitId != null)
+        {
+            try
+            {
+                await LibraryUnitRepository.DeleteUnit(DeleteUnitId.Value);
+                Units = await LibraryUnitRepository.GetAllUnits();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error", ex);
+            }
+            Units = await LibraryUnitRepository.GetAllUnits();
+        }
+    }
+}

@@ -1,0 +1,109 @@
+﻿@page "/libraryUnit/create"
+@page "/libraryUnit/edit/{Id:int}"
+@using Business.Repository
+@using DataAccess.Data
+@using ModelsDTO
+@using Business.Repository.IRepository
+@using DataAccess.Data.Enums
+@inject ILibraryUnitRepository LibraryUnitRepository;
+@inject NavigationManager NavManager;
+
+
+<div class="row mt-2 mb-5">
+    <h3 class="card-title text-info mb-3 ml-3">@Name Unit</h3>
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <EditForm Model=UnitModel OnValidSubmit="HandleUnitUpsert">
+
+                    <div class="form-group">
+                        <label for="Title">Book Title</label>
+                        <InputSelect placeholder="Title" @bind-Value="Books">
+                            @foreach (var book in Books)
+                            {
+                                <option value="@book.Title">@book.Title</option>
+                            }
+                        </InputSelect>
+                    </div>
+
+
+
+                    <br />
+                    <InputSelect @bind-Value="UnitModel.UnitCondition">
+                        @foreach (var unitCondition in Enum.GetValues(typeof(UnitCondition)))
+                        {
+                            <option value=@unitCondition>@unitCondition</option>
+                        }
+                        <ValidationMessage For="()=>UnitModel.UnitCondition"></ValidationMessage>
+                    </InputSelect>
+                    <br />
+
+                    <InputSelect @bind-Value="UnitModel.Carrier">
+                        @foreach (var carrier in Enum.GetValues(typeof(Carrier)))
+                        {
+                            <option value=@carrier>@carrier</option>
+                        }
+                        <ValidationMessage For="()=>UnitModel.UnitCondition"></ValidationMessage>
+                    </InputSelect>
+
+                    <div class="form-group">
+                        <button class="btn btn-primary">@Name Unit</button>
+                        <NavLink href="libraryUnit" class="btn btn-secondary">Back to Index</NavLink>
+                    </div>
+                </EditForm>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+    private LibraryUnitDTO UnitModel { get; set; } = new LibraryUnitDTO();
+    private IEnumerable<BookDTO> Books { get; set; } = new List<BookDTO>();
+    private string Name { get; set; } = "Create";
+
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        if (Id != null)
+        {
+            Name = "Update";
+
+            UnitModel = await LibraryUnitRepository.GetUnit(Id.Value);
+
+        }
+        else
+        {
+            UnitModel = new LibraryUnitDTO();
+        }
+    }
+
+    private async Task HandleUnitUpsert()
+    {
+        var unitDetails = await LibraryUnitRepository.IsUnitUnique(UnitModel.InventoryId);
+        if (unitDetails != null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (UnitModel.InventoryId != 0 && Name == "Update")
+            {
+                var updateUnit = await LibraryUnitRepository.UpdateUnit(UnitModel.InventoryId, UnitModel);
+            }
+            else
+            {
+                var result = await LibraryUnitRepository.CreateUnit(UnitModel);
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Error", ex);
+        }
+        NavManager.NavigateTo("libraryUnit");
+    }
+}
